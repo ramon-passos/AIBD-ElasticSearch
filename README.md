@@ -20,7 +20,7 @@ Clique em `explore on my own` e em seguida abra o menu no canto superior esquerd
 
 ## Criando um índice e populando os dados
 
-### Criando índice:
+### Criando índice
 
 ```
 PUT /alunos
@@ -40,7 +40,7 @@ PUT /alunos
                 "type": "text"
             },
             "materias_feitas": {
-                "type": "object"
+                "type": "nested"
             },
             "periodo": {
                 "type": "integer"
@@ -66,7 +66,7 @@ PUT /alunos
 }
 ```
 
-### Populando os dados:
+### Populando os dados
 
 ```
 POST _bulk
@@ -92,4 +92,164 @@ POST _bulk
 { "nome": "Matheus Castro", "RA": "789012", "CR": 8.9, "materias_matriculadas": ["Algoritmos", "Banco de Dados", "Programação Web"], "materias_feitas": [{ "nome": "Introdução à Programação", "nota": 8.2, "carga_horaria": 60 }, { "nome": "Algoritmos", "nota": 8.7, "carga_horaria": 60 }, { "nome": "Banco de Dados", "nota": 9.0, "carga_horaria": 45 }, { "nome": "Programação Web", "nota": 8.5, "carga_horaria": 60 }], "periodo": 5, "data_nascimento": "1993-09-30", "endereco": "Rua XYZ, 456", "genero": "Masculino", "telefone": "321654987", "email": "matheus.castro@example.com" }
 { "index" : { "_index" : "alunos", "_id": "567890" } }
 { "nome": "Lara Oliveira", "RA": "567890", "CR": 6.5, "materias_matriculadas": ["Engenharia de Software", "Sistemas Operacionais"], "materias_feitas": [{ "nome": "Algoritmos", "nota": 6.2, "carga_horaria": 60 }, { "nome": "Engenharia de Software", "nota": 6.8, "carga_horaria": 60 }, { "nome": "Sistemas Operacionais", "nota": 6.5, "carga_horaria": 60 }], "periodo": 4, "data_nascimento": "1994-01-05", "endereco": "Rua ABC, 123", "genero": "Feminino", "telefone": "987321654", "email": "lara.oliveira@example.com" }    
+```
+
+### Executando consultas
+
+Aqui estão alguns exemplos de consultas que podem ser feitas no Elasticsearch no documento alunos:
+
+1. Selecione o nome e RA dos alunos com CR maior que 8.0:
+
+```bash
+GET /alunos/_search
+{
+  "_source": ["nome", "RA"],
+  "query": {
+    "range": {
+      "CR": {
+        "gt": 8.0
+      }
+    }
+  }
+}
+```
+
+2. Selecione o nome, CR e período dos alunos que estão no período 5 ou superior e que tenham feito a matéria Introdução à Programação:
+
+```bash
+GET alunos/_search
+{
+  "_source": ["nome", "CR", "periodo"],
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "range": {
+            "periodo": {
+              "gte": 5
+            }
+          }
+        },
+        {
+          "nested": {
+            "path": "materias_feitas",
+            "query": {
+              "match": {
+                "materias_feitas.nome": "Introdução à Programação"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+3. Selecione os alunos matriculados em Banco de Dados:
+
+```bash
+GET /alunos/_search
+{
+  "query": {
+    "match": {
+      "materias_matriculadas": "Banco de Dados"
+    }
+  }
+}
+
+```
+
+4. Selecione o nome e email dos alunos que fizeram a matéria Algoritmos e tiraram nota maior que 8.0:
+
+```bash
+GET /alunos/_search
+{
+  "_source": ["nome", "email"],
+  "query": {
+    "nested": {
+      "path": "materias_feitas",
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "materias_feitas.nome": "Algoritmos"
+              }
+            },
+            {
+              "range": {
+                "materias_feitas.nota": {
+                  "gt": 8.0
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+5. Selecione os alunos do genero feminino que estão no período 4 e que fizeram a matéria Sistemas Operacionais:
+
+```bash
+GET /alunos/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "genero": "Feminino"
+          }
+        },
+        {
+          "match": {
+            "periodo": 4
+          }
+        },
+        {
+          "nested": {
+            "path": "materias_feitas",
+            "query": {
+              "match": {
+                "materias_feitas.nome": "Sistemas Operacionais"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+6. Selecione os alunos com idade menor ou igual a 30 anos e com CR maior que 7.0:
+
+```bash
+GET /alunos/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "range": {
+            "CR": {
+              "gt": 7.0
+            }
+          }
+        },
+        {
+          "range": {
+            "data_nascimento": {
+              "gte": "now-30y"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
 ```
